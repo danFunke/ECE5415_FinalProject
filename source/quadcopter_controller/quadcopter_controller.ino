@@ -5,6 +5,7 @@
  */
 
 #include "rc_controller.h"
+#include "imu.h"
 
 /*** Global variables ***/
 uint16_t TIMER_COMPARE_VALUE = 249;  // (16 * 10^6) / (250 * 256) - 1
@@ -42,8 +43,10 @@ ISR(TIMER1_COMPA_vect)
 }
 
 void setup() {
-  // configure_interrupts();
+  configure_interrupts();
+  imu_init();
   rc_controller_init();
+  
 
   // Dev/Debug
   pinMode(8, OUTPUT);
@@ -52,13 +55,16 @@ void setup() {
 
 void loop() 
 {
-  rc_controller_update();
+  // rc_controller_update();
 
   // Dev/Debug
-  for (int i = 0; i < NUM_REF_VALUES; ++i) {
-    Serial.print(rc_controller_get_value(i));
-    Serial.print(',');
-  }
-  Serial.println();
+  gyro_signals();
+  Serial.print("Acceleration X [g]= ");
+  Serial.print(x_acc);
+  Serial.print(" Acceleration Y [g]= ");
+  Serial.print(y_acc);
+  Serial.print(" Acceleration Z [g]= ");
+  Serial.println(z_acc);
+  delay(100);
 
 }

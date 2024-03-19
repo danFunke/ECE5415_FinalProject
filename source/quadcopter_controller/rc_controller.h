@@ -36,25 +36,25 @@ void rc_controller_update(void)
   }
 }
 
-float rc_controller_get_value(enum REFERENCE_VALUE_NAMES ref_val)
+float rc_controller_get_value(int ref_idx)
 {
   float ret = 0;
 
   // Map averaged value to pseudo-log function; 
-  if ((reference_values[ref_val].averaged_value > 1470) && (reference_values[ref_val].averaged_value < 1510)) {
+  if ((reference_values[ref_idx].averaged_value > 1470) && (reference_values[ref_idx].averaged_value < 1510)) {
     ret = 0;  // Joysticks in neutral position
   }
-  else if ((reference_values[ref_val].averaged_value > 1510) && (reference_values[ref_val].averaged_value < 1800)) {
-    ret = (reference_values[ref_val].averaged_value - 1510) * 0.0003;
+  else if ((reference_values[ref_idx].averaged_value > 1510) && (reference_values[ref_idx].averaged_value < 1800)) {
+    ret = (reference_values[ref_idx].averaged_value - 1510) * 0.0003;
   }
-  else if (reference_values[ref_val].averaged_value > 1800) {
-    ret = ((reference_values[ref_val].averaged_value - 1800) * 0.00175) + 0.15;
+  else if (reference_values[ref_idx].averaged_value > 1800) {
+    ret = ((reference_values[ref_idx].averaged_value - 1800) * 0.00175) + 0.15;
   }
-  else if ((reference_values[ref_val].averaged_value > 1200) && (reference_values[ref_val].averaged_value < 1470)) {
-    ret = (reference_values[ref_val].averaged_value - 1470) * 0.0003;
+  else if ((reference_values[ref_idx].averaged_value > 1200) && (reference_values[ref_idx].averaged_value < 1470)) {
+    ret = (reference_values[ref_idx].averaged_value - 1470) * 0.0003;
   }
-  else if (reference_values[ref_val].averaged_value < 1200) {
-    ret = ((reference_values[ref_val].averaged_value - 1200) * 0.002) - 0.15;
+  else if (reference_values[ref_idx].averaged_value < 1200) {
+    ret = ((reference_values[ref_idx].averaged_value - 1200) * 0.002) - 0.15;
   }
 
   return ret;
