@@ -16,7 +16,7 @@ static void configure_interrupts(void)
 {
   cli();  // Disable interrupts
 
-  // Set timer1 interrupt at 1Hz
+  // Set timer1 interrupt at 250Hz
   TCCR1A = 0;                     // Clear TCCR1A register
   TCCR1B = 0;                     // Clear TCCR1B register
   TCNT1 = 0;                      // Initialize counter value to 0
@@ -31,16 +31,11 @@ static void configure_interrupts(void)
 /*** Interrupt Handlers ***/
 ISR(TIMER1_COMPA_vect)
 {
-
-  // Dev/Debug
-  if (toggle1) {
-    digitalWrite(8, HIGH);
-    toggle1 = 0;
-  } else {
-    digitalWrite(8, LOW);
-    toggle1 = 1;
-  }
+  
+  
 }
+
+uint32_t loop_timer;
 
 void setup() {
   configure_interrupts();
@@ -50,21 +45,23 @@ void setup() {
 
   // Dev/Debug
   pinMode(8, OUTPUT);
-  Serial.begin(9600);
+  Serial.begin(57600);
+
+  // Initialize loop timer
+  loop_timer = micros();
 }
 
 void loop() 
 {
   // rc_controller_update();
+  imu_update();
 
-  // Dev/Debug
-  gyro_signals();
-  Serial.print("Acceleration X [g]= ");
-  Serial.print(x_acc);
-  Serial.print(" Acceleration Y [g]= ");
-  Serial.print(y_acc);
-  Serial.print(" Acceleration Z [g]= ");
-  Serial.println(z_acc);
-  delay(100);
+  Serial.print("Roll Angle [deg] ");
+  Serial.print(imu_get_roll_angle());
+  Serial.print(" Pitch Angle [deg] ");
+  Serial.println(imu_get_pitch_angle());
 
+  // pause for 4 ms - 250 Hz update frequency
+  while(micros() - loop_timer < 4000) {}
+  loop_timer = micros();
 }
