@@ -59,6 +59,14 @@ void imu_update(void)
     rate_yaw -= rate_yaw_calibration;
   }
 
+  // DEBUG
+  // Serial.print("roll = ");
+  // Serial.print(rate_roll);
+  // Serial.print(" pitch = ");
+  // Serial.print(rate_pitch);
+  // Serial.print(" yaw = ");
+  // Serial.println(rate_yaw);
+
   // Calculate roll and pitch angles in radians
   // float roll_angle_raw = atan(acc_y / sqrt(acc_x * acc_x + acc_z * acc_z));
   // float pitch_angle_raw = -atan(acc_x / sqrt(acc_y * acc_y + acc_z * acc_z));
@@ -111,9 +119,9 @@ void imu_init(void)
     rate_yaw_calibration += rate_yaw;
     delay(1);
   }
-  rate_roll_calibration = rate_roll_calibration / RATE_CALIBRATION_ITERATIONS;
-  rate_pitch_calibration = rate_pitch_calibration / RATE_CALIBRATION_ITERATIONS;
-  rate_yaw_calibration = rate_yaw_calibration / RATE_CALIBRATION_ITERATIONS;
+  rate_roll_calibration = (rate_roll_calibration / RATE_CALIBRATION_ITERATIONS);
+  rate_pitch_calibration = (rate_pitch_calibration / RATE_CALIBRATION_ITERATIONS);
+  rate_yaw_calibration = (rate_yaw_calibration / RATE_CALIBRATION_ITERATIONS);
   gyro_is_calibrated = true;
 
   // Initialize output filters

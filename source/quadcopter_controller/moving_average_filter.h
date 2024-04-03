@@ -17,8 +17,8 @@ typedef struct {
   int averaged_value;
 } moving_average_filter_t;
 
-void filter_init(moving_average_filter_t* filter);
+void moving_average_filter_init(moving_average_filter_t* filter);
 
-void filter_update(moving_average_filter_t* filter, int new_value);
+void moving_average_filter_update(moving_average_filter_t* filter, int new_value);
 
 #endif /* MOVING_AVERAGE_FILTER_H_ */

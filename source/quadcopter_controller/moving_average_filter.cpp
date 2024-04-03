@@ -1,6 +1,6 @@
 #include "moving_average_filter.h"
 
-void filter_init(moving_average_filter_t* filter)
+void moving_average_filter_init(moving_average_filter_t* filter)
 {
   filter->index = 0;
   filter->value = 0;
@@ -8,7 +8,7 @@ void filter_init(moving_average_filter_t* filter)
   filter->averaged_value = 0;
 }
 
-void filter_update(moving_average_filter_t* filter, int new_value) 
+void moving_average_filter_update(moving_average_filter_t* filter, int new_value) 
 {
   filter->sum = (filter->sum - filter->window[filter->index]);  // Remove the oldest entry from the sum
   filter->window[filter->index] = new_value;                    // Add new value to window

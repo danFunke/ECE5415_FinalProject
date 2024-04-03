@@ -4,64 +4,61 @@
  *
  */
 
-#include "rc_controller.h"
+#include "rc_receiver.h"
 #include "imu.h"
 
 /*** Global variables ***/
-uint16_t TIMER_COMPARE_VALUE = 249;  // (16 * 10^6) / (250 * 256) - 1
-boolean toggle1 = 0;
+const uint32_t FRAME_DURATION = 4000;
 
 /*** Static functions ***/
-static void configure_interrupts(void)
+
+uint32_t frame_timer;
+
+void setup(void) 
 {
-  cli();  // Disable interrupts
-
-  // Set timer1 interrupt at 250Hz
-  TCCR1A = 0;                     // Clear TCCR1A register
-  TCCR1B = 0;                     // Clear TCCR1B register
-  TCNT1 = 0;                      // Initialize counter value to 0
-  OCR1A = TIMER_COMPARE_VALUE;    // 250 Hz w/prescaler set to 256
-  TCCR1B |= (1 << WGM12);         // Turn on CTC mode
-  TCCR1B |= (1 << CS12);          // Set CS12 bit for 256 prescaler
-  TIMSK1 |= (1 << OCIE1A);        // Enable timer compare interrupt
-
-  sei();  // Enable interrupts
-}
-
-/*** Interrupt Handlers ***/
-ISR(TIMER1_COMPA_vect)
-{
-  
-  
-}
-
-uint32_t loop_timer;
-
-void setup() {
-  configure_interrupts();
   imu_init();
-  rc_controller_init();
+  rc_receiver_init();
   
-
   // Dev/Debug
   pinMode(8, OUTPUT);
-  Serial.begin(57600);
+  Serial.begin(115200);
 
-  // Initialize loop timer
-  loop_timer = micros();
+  // Initialize frame timer
+  frame_timer = micros();
 }
 
 void loop() 
 {
-  // rc_controller_update();
   imu_update();
+  rc_receiver_update();
 
-  Serial.print("Roll Angle [deg] ");
-  Serial.print(imu_get_roll_angle());
-  Serial.print(" Pitch Angle [deg] ");
-  Serial.println(imu_get_pitch_angle());
+  // Delay until end of frame
+  while(micros() - frame_timer < FRAME_DURATION) {}
+  frame_timer = micros();
 
-  // pause for 4 ms - 250 Hz update frequency
-  while(micros() - loop_timer < 4000) {}
-  loop_timer = micros();
+  // Debug
+  Serial.print("Channel 1:");
+  Serial.print(rc_receiver_get_value(1));
+  Serial.print(",");
+  Serial.print("Channel 2:");
+  Serial.print(rc_receiver_get_value(2));
+  Serial.print(",");
+  Serial.print("Channel 3:");
+  Serial.print(rc_receiver_get_value(3));
+  Serial.print(",");
+  Serial.print("Channel 4:");
+  Serial.print(rc_receiver_get_value(4));
+  // Serial.print(",");
+  // Serial.print("Channel 5:");
+  // Serial.print(rc_receiver_get_value(5));
+  // Serial.print(",");
+  // Serial.print("Channel 6:");
+  // Serial.print(rc_receiver_get_value(6));
+  // Serial.print(",");
+  // Serial.print("Channel 7:");
+  // Serial.print(rc_receiver_get_value(7));
+  // Serial.print(",");
+  // Serial.print("Channel 8:");
+  // Serial.print(rc_receiver_get_value(8));
+  Serial.println();
 }
