@@ -40,3 +40,9 @@ void pid_update(pid_t* pid, float error)
   pid->i_term_prev = i_term;
   pid->error_prev = error;
 }
+
+void pid_reset(pid_t* pid)
+{
+  pid->i_term_prev = 0;
+  pid->error_prev = 0;
+}

@@ -15,4 +15,6 @@ void pid_init(pid_t* pid, float kp, float ki, float kd, float dt);
 
 void pid_update(pid_t* pid, float error);
 
+void pid_reset(pid_t* pid);
+
 #endif /* PID_H_ */

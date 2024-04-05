@@ -59,14 +59,6 @@ void imu_update(void)
     rate_yaw -= rate_yaw_calibration;
   }
 
-  // DEBUG
-  // Serial.print("roll = ");
-  // Serial.print(rate_roll);
-  // Serial.print(" pitch = ");
-  // Serial.print(rate_pitch);
-  // Serial.print(" yaw = ");
-  // Serial.println(rate_yaw);
-
   // Calculate roll and pitch angles in radians
   // float roll_angle_raw = atan(acc_y / sqrt(acc_x * acc_x + acc_z * acc_z));
   // float pitch_angle_raw = -atan(acc_x / sqrt(acc_y * acc_y + acc_z * acc_z));
@@ -127,6 +119,21 @@ void imu_init(void)
   // Initialize output filters
   kalman_filter_init(&roll_angle);
   kalman_filter_init(&pitch_angle);
+}
+
+float imu_get_roll_rate(void)
+{
+  return rate_roll;
+}
+
+float imu_get_pitch_rate(void)
+{
+  return rate_pitch;
+}
+
+float imu_get_yaw_rate(void)
+{
+  return rate_yaw;
 }
 
 float imu_get_roll_angle(void)

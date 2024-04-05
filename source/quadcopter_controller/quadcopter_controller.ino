@@ -4,8 +4,9 @@
  *
  */
 
-#include "rc_receiver.h"
 #include "imu.h"
+#include "motor_controller.h"
+#include "rc_receiver.h"
 
 /*** Global variables ***/
 const uint32_t FRAME_DURATION = 4000;
@@ -17,8 +18,11 @@ uint32_t frame_timer;
 void setup(void) 
 {
   imu_init();
+  motor_controller_init();
   rc_receiver_init();
+
   
+
   // Dev/Debug
   pinMode(8, OUTPUT);
   Serial.begin(115200);
@@ -30,6 +34,7 @@ void setup(void)
 void loop() 
 {
   imu_update();
+  motor_controller_update();
   rc_receiver_update();
 
   // Delay until end of frame
@@ -37,28 +42,16 @@ void loop()
   frame_timer = micros();
 
   // Debug
-  Serial.print("Channel 1:");
-  Serial.print(rc_receiver_get_value(1));
-  Serial.print(",");
-  Serial.print("Channel 2:");
-  Serial.print(rc_receiver_get_value(2));
-  Serial.print(",");
-  Serial.print("Channel 3:");
-  Serial.print(rc_receiver_get_value(3));
-  Serial.print(",");
-  Serial.print("Channel 4:");
-  Serial.print(rc_receiver_get_value(4));
+  // Serial.print("Channel 1:");
+  // Serial.print(rc_receiver_get_value(1));
   // Serial.print(",");
-  // Serial.print("Channel 5:");
-  // Serial.print(rc_receiver_get_value(5));
+  // Serial.print("Channel 2:");
+  // Serial.print(rc_receiver_get_value(2));
   // Serial.print(",");
-  // Serial.print("Channel 6:");
-  // Serial.print(rc_receiver_get_value(6));
+  // Serial.print("Channel 3:");
+  // Serial.print(rc_receiver_get_value(3));
   // Serial.print(",");
-  // Serial.print("Channel 7:");
-  // Serial.print(rc_receiver_get_value(7));
-  // Serial.print(",");
-  // Serial.print("Channel 8:");
-  // Serial.print(rc_receiver_get_value(8));
-  Serial.println();
+  // Serial.print("Channel 4:");
+  // Serial.print(rc_receiver_get_value(4));
+  // Serial.println();
 }
