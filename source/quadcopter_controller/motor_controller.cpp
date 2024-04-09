@@ -2,70 +2,96 @@
 #include "imu.h"
 #include "pid.h"
 #include "rc_receiver.h"
-#include <Servo.h>
 
-#define THROTTLE_MAX    1800
-#define THROTTLE_CUTOFF 1050
+#include <Arduino.h>
+
+#define MOTOR_CONTROL_PINS B11110000
+
+#define THROTTLE_MAX  1800
+#define THROTTLE_IDLE 1200
+#define THROTTLE_MIN  1050
 
 #define MOTOR_INPUT_MAX   2000
-#define MOTOR_INPUT_IDLE  1200
+#define MOTOR_INPUT_IDLE  1100
 #define MOTOR_INPUT_MIN   1000
 
-enum AnglePIDNames {
-  ANGLE_PID_ROLL,
-  ANGLE_PID_PITCH,
-  NUM_ANGLE_PIDS
+enum PIDNames {
+  PID_ROLL,
+  PID_PITCH,
+  PID_YAW,
+  NUM_PIDS
 };
 
 // TODO: fill in appropriate gain values; gains for roll and pitch will be equal
-const float ANGLE_K_P[] = {1, 1, 1};
-const float ANGLE_K_I[] = {1, 1, 1};
-const float ANGLE_K_D[] = {1, 1, 1};
+const float K_P[] = {1.3, 1.3, 4.0};
+const float K_I[] = {0.04, 0.04, 0.02};
+const float K_D[] = {18, 18, 1};
 const float dT = 0.004;
-pid_t angle_pids[NUM_ANGLE_PIDS];
+pid_t pids[NUM_PIDS];
 
-enum RatePIDNames {
-  RATE_PID_ROLL,
-  RATE_PID_PITCH,
-  RATE_PID_YAW,
-  NUM_RATE_PIDS
-};
+int motor_inputs[NUM_MOTORS];
 
-// TODO: fill in appropriate gain values; gains for roll and pitch will be equal
-const float RATE_K_P[] = {1, 1, 1};
-const float RATE_K_I[] = {1, 1, 1};
-const float RATE_K_D[] = {1, 1, 1};
-pid_t rate_pids[NUM_RATE_PIDS];
+static void write_pulses(void)
+{
+  // Get current time
+  unsigned long pulse_timer = micros();
 
-enum MotorNames {
-  MOTOR_1,
-  MOTOR_2,
-  MOTOR_3,
-  MOTOR_4,
-  NUM_MOTORS
-};
+  // Write ones to all motor control output pins
+  PORTD |= MOTOR_CONTROL_PINS;
 
-// TODO: correct pin numbers for drone arduino
-const int MOTOR_PINS[] = {11, 10, 9, 6};
-Servo motors[NUM_MOTORS];
+  // Calculate pulse durations
+  unsigned long pulse_durations[NUM_MOTORS];
+  for (int i = 0; i < NUM_MOTORS; ++i) {
+    pulse_durations[i] = motor_inputs[i] + pulse_timer;
+  }
+  
+  // Write pulses over output pins
+  unsigned long loop_timer;
+  while (PORTD >= 16) {
+    loop_timer = micros();
+
+    if (pulse_durations[0] <= loop_timer) {
+      PORTD &= B11101111;
+    }
+
+    if (pulse_durations[1] <= loop_timer) {
+      PORTD &= B11011111;
+    }
+
+    if (pulse_durations[2] <= loop_timer) {
+      PORTD &= B10111111;
+    }
+
+    if (pulse_durations[3] <= loop_timer) {
+      PORTD &= B01111111;
+    }
+
+  }
+}
 
 void motor_controller_init(void)
 {
-  // Initialize angle PIDs
-  for (int i = 0; i < NUM_ANGLE_PIDS; ++i) {
-    pid_init(&angle_pids[i], ANGLE_K_P[i], ANGLE_K_I[i], ANGLE_K_D[i], dT);
+  // Set motor control pins as output
+  DDRD |= MOTOR_CONTROL_PINS;
+
+  // Wait 5 seconds; send 0 signal to ESCs so they stay quiet
+  for (int i = 0; i < 1250; ++i) {
+    PORTD |= MOTOR_CONTROL_PINS;
+    delayMicroseconds(1000);
+    PORTD &= ~MOTOR_CONTROL_PINS;
+    delayMicroseconds(3000);
   }
 
-  // Initialize rate PIDs
-  for (int i = 0; i < NUM_RATE_PIDS; ++i) {
-    pid_init(&rate_pids[i], RATE_K_P[i], RATE_K_I[i], RATE_K_D[i], dT);
+  // Initialize PIDs
+  for (int i = 0; i < NUM_PIDS; ++i) {
+    pid_init(&pids[i], K_P[i], K_I[i], K_D[i], dT);
   }
 
-  // Initialize motors
+  // Initialize motor control values
   for (int i = 0; i < NUM_MOTORS; ++i) {
-    motors[i].attach(MOTOR_PINS[i]);
-    motors[i].write(MOTOR_INPUT_MIN);
+    motor_inputs[i] = 1200;
   }
+
 }
 
 void motor_controller_update(void)
@@ -79,20 +105,12 @@ void motor_controller_update(void)
   // Calculate angle error values
   float error_angle_roll = reference_angle_roll - imu_get_roll_angle();
   float error_angle_pitch = reference_angle_pitch - imu_get_pitch_angle();
+  float error_rate_yaw  = reference_rate_yaw - imu_get_yaw_rate();
 
-  // Update angle PIDs
-  pid_update(&angle_pids[ANGLE_PID_ROLL], error_angle_roll);
-  pid_update(&angle_pids[ANGLE_PID_PITCH], error_angle_pitch);
-
-  // Calculate rate error values
-  float error_rate_roll = angle_pids[ANGLE_PID_ROLL].output - imu_get_roll_rate();
-  float error_rate_pitch = angle_pids[ANGLE_PID_PITCH].output - imu_get_pitch_rate();
-  float error_rate_yaw = reference_rate_yaw - imu_get_yaw_rate();
-
-  // Update rate PIDs
-  pid_update(&rate_pids[RATE_PID_ROLL], error_rate_roll);
-  pid_update(&rate_pids[RATE_PID_PITCH], error_rate_pitch);
-  pid_update(&rate_pids[RATE_PID_YAW], error_rate_yaw);
+  // Update PIDs
+  pid_update(&pids[PID_ROLL], error_angle_roll);
+  pid_update(&pids[PID_PITCH], error_angle_pitch);
+  pid_update(&pids[PID_YAW], error_rate_yaw);
 
   // Check for saturation of throttle
   if (reference_throttle > THROTTLE_MAX) {
@@ -100,11 +118,10 @@ void motor_controller_update(void)
   }
 
   // Calculate motor control inputs
-  float motor_inputs[NUM_MOTORS];
-  motor_inputs[MOTOR_1] = 1.024 * (reference_throttle - rate_pids[RATE_PID_ROLL].output - rate_pids[RATE_PID_PITCH].output - rate_pids[RATE_PID_YAW].output);
-  motor_inputs[MOTOR_2] = 1.024 * (reference_throttle - rate_pids[RATE_PID_ROLL].output + rate_pids[RATE_PID_PITCH].output + rate_pids[RATE_PID_YAW].output);
-  motor_inputs[MOTOR_3] = 1.024 * (reference_throttle + rate_pids[RATE_PID_ROLL].output + rate_pids[RATE_PID_PITCH].output - rate_pids[RATE_PID_YAW].output);
-  motor_inputs[MOTOR_4] = 1.024 * (reference_throttle + rate_pids[RATE_PID_ROLL].output - rate_pids[RATE_PID_PITCH].output + rate_pids[RATE_PID_YAW].output);
+  motor_inputs[MOTOR_1] = (reference_throttle - pids[PID_PITCH].output + pids[PID_ROLL].output - pids[PID_YAW].output);
+  motor_inputs[MOTOR_2] = (reference_throttle + pids[PID_PITCH].output + pids[PID_ROLL].output + pids[PID_YAW].output);
+  motor_inputs[MOTOR_3] = (reference_throttle + pids[PID_PITCH].output - pids[PID_ROLL].output - pids[PID_YAW].output);
+  motor_inputs[MOTOR_4] = (reference_throttle - pids[PID_PITCH].output - pids[PID_ROLL].output + pids[PID_YAW].output);
 
   // Check for saturation/idle conditions of motor inputs
   for (int i = 0; i < NUM_MOTORS; ++i) {
@@ -120,24 +137,22 @@ void motor_controller_update(void)
   }
 
   // Check for cutoff condition
-  if (reference_throttle < THROTTLE_CUTOFF) {
+  if (reference_throttle < THROTTLE_MIN) {
     for (int i = 0; i < NUM_MOTORS; ++i) {
       motor_inputs[i] = MOTOR_INPUT_MIN;
     }
 
     // Reset PIDs
-    for (int i = 0; i < NUM_ANGLE_PIDS; ++i) {
-      pid_reset(&angle_pids[i]);
-    }
-
-    for (int i = 0; i < NUM_RATE_PIDS; ++i) {
-      pid_reset(&rate_pids[i]);
+    for (int i = 0; i < NUM_PIDS; ++i) {
+      pid_reset(&pids[i]);
     }
   }
 
   // Write motor control values
-  for (int i = 0; i < NUM_MOTORS; ++i) {
-    motors[i].write(motor_inputs[i]);
-  }
-  
+  write_pulses();
+}
+
+int motor_controller_get_inputs(int motor_index)
+{
+  return motor_inputs[motor_index];
 }
