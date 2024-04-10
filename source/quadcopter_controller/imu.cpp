@@ -26,22 +26,32 @@ float acc_z_calibration = -0.02;
 kalman_filter_1d_t roll_angle;
 kalman_filter_1d_t pitch_angle;
 
-void imu_update(void)
-{
+// Made global to share between update1 and update2
+int16_t acc_x_bin;
+int16_t acc_y_bin;
+int16_t acc_z_bin;
+
+void imu_update1(void){
+  // This function call takes approx 950us
+
   // Get accelerometer data (6 bytes) from MPU
   Wire.beginTransmission(MPU_ADDR);
   Wire.write(0x3B);
   Wire.endTransmission();
-  Wire.requestFrom(MPU_ADDR, 6);
-  int16_t acc_x_bin = Wire.read() << 8 | Wire.read();
-  int16_t acc_y_bin = Wire.read() << 8 | Wire.read();
-  int16_t acc_z_bin = Wire.read() << 8 | Wire.read();
+  Wire.requestFrom(MPU_ADDR, 14);
+  acc_x_bin = Wire.read() << 8 | Wire.read();
+  acc_y_bin = Wire.read() << 8 | Wire.read();
+  acc_z_bin = Wire.read() << 8 | Wire.read();
+  Wire.read() << 8 | Wire.read(); // This is temperature data, we don't care about it
+}
 
+void imu_update2(void)
+{
   // Get gyroscope data (6 bytes) from MPU
-  Wire.beginTransmission(MPU_ADDR);
-  Wire.write(0x43);
-  Wire.endTransmission();
-  Wire.requestFrom(MPU_ADDR, 6);
+  // Wire.beginTransmission(MPU_ADDR);
+  // Wire.write(0x43);
+  // Wire.endTransmission();
+  // Wire.requestFrom(MPU_ADDR, 6);
   int16_t gyro_x_bin = Wire.read() << 8 | Wire.read();
   int16_t gyro_y_bin = Wire.read() << 8 | Wire.read();
   int16_t gyro_z_bin = Wire.read() << 8 | Wire.read();
@@ -80,6 +90,7 @@ void imu_init(void)
   Wire.begin();
   delay(250);
 
+  Serial.println("Configuring IMU");
   // Wake up MPU and set clock source to internal 8MHz oscillator
   Wire.beginTransmission(MPU_ADDR);
   Wire.write(0x6B);
@@ -105,8 +116,10 @@ void imu_init(void)
   Wire.endTransmission();
 
   // Calibrate Rate signals
+  Serial.println("Calibrating rate signals...");
   for (int i = 0; i < RATE_CALIBRATION_ITERATIONS; ++i) {
-    imu_update();
+    imu_update1();
+    imu_update2();
     rate_roll_calibration += rate_roll;
     rate_pitch_calibration += rate_pitch;
     rate_yaw_calibration += rate_yaw;
@@ -118,10 +131,12 @@ void imu_init(void)
   gyro_is_calibrated = true;
 
   // Initialize output filters
+  Serial.println("Initializing Kalman Filters...");
   kalman_filter_init(&roll_angle);
   kalman_filter_init(&pitch_angle);
 
   // Get offsets for roll and pitch values
+  Serial.println("Getting roll and pitch offsets.");
   offset_init();
 }
 
@@ -142,10 +157,10 @@ float imu_get_yaw_rate(void)
 
 float imu_get_roll_angle(void)
 {
-  return roll_angle.kalman_value - get_roll_offset();
+  return(roll_angle.kalman_value - get_roll_offset());
 }
 
 float imu_get_pitch_angle(void)
 {
-  return pitch_angle.kalman_value - get_pitch_offset();
+  return(pitch_angle.kalman_value - get_pitch_offset());
 }

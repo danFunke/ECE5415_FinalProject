@@ -9,7 +9,9 @@
 
 void imu_init(void);
 
-void imu_update(void);
+void imu_update1(void);
+
+void imu_update2(void);
 
 float imu_get_roll_rate(void);
 

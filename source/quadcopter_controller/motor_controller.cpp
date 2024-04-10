@@ -7,16 +7,19 @@
 
 #define MOTOR_CONTROL_PINS B11110000
 
-#define MAX_ANGLE 20
-#define CONTROL_ANGLE_RATIO MAX_ANGLE/500
+#define MAX_ANGLE 20.0
+#define CONTROL_ANGLE_RATIO MAX_ANGLE/500.0
 
 #define THROTTLE_MAX  1800
 #define THROTTLE_IDLE 1200
 #define THROTTLE_MIN  1050
+#define THROTTLE_OFFSET 200
 
-#define MOTOR_INPUT_MAX   1600
+#define MOTOR_INPUT_MAX   1800
 #define MOTOR_INPUT_IDLE  1100
 #define MOTOR_INPUT_MIN   1000
+
+#define DEADZONE 75 // + or - from 1500
 
 enum PIDNames {
   PID_ROLL,
@@ -26,10 +29,10 @@ enum PIDNames {
 };
 
 // TODO: fill in appropriate gain values; gains for roll and pitch will be equal
-const float K_P[] = {1.3, 1.3, 4.0};
-const float K_I[] = {0.04, 0.04, 0.02};
-const float K_D[] = {18, 18, 1};
-const float dT = 0.004;
+const float K_P[] = {4, 4, 4.0};// {1.3, 1.3, 4.0};
+const float K_I[] = {0, 0, 0};// {0.04, 0.04, 0.02};
+const float K_D[] = {2, 2, 0};// {18, 18, 1};
+const float dT = 0.005;
 pid_t pids[NUM_PIDS];
 
 int motor_inputs[NUM_MOTORS];
@@ -49,7 +52,9 @@ static void write_pulses(void)
   for (int i = 0; i < NUM_MOTORS; ++i) {
     pulse_durations[i] = motor_inputs[i] + pulse_timer;
   }
-  
+
+  imu_update2();
+
   // Write pulses over output pins
   unsigned long loop_timer;
   while (PORTD >= 16) {
@@ -101,11 +106,35 @@ void motor_controller_init(void)
 
 void motor_controller_update(void)
 {
+  // Get inputs from RC receiver and map
+  float controller_roll_input = rc_receiver_get_value(RC_RECEIVER_CHANNEL_1);
+  float controller_pitch_input = rc_receiver_get_value(RC_RECEIVER_CHANNEL_2);
+  // Serial.print("roll_input: "); Serial.print(controller_roll_input);
+  // Serial.print(" pitch_input: "); Serial.println(controller_pitch_input);
+  if((controller_pitch_input >= (1500 - DEADZONE)) && (controller_pitch_input <= (1500 + DEADZONE))){
+    controller_pitch_input = 1500;
+  }else if(controller_pitch_input > (1500 + DEADZONE)){
+    controller_pitch_input = controller_pitch_input - DEADZONE;
+  }else{
+    controller_pitch_input = controller_pitch_input + DEADZONE;
+  }
+
+  if((controller_roll_input >= (1500 - DEADZONE)) && (controller_roll_input <= (1500 + DEADZONE))){
+    controller_roll_input = 1500;
+  }else if(controller_roll_input > (1500 + DEADZONE)){
+    controller_roll_input = controller_roll_input - DEADZONE;
+  }else{
+    controller_roll_input = controller_roll_input + DEADZONE;
+  }
+
+  // Serial.print("roll_input: "); Serial.print(controller_roll_input);
+  // Serial.print(" pitch_input: "); Serial.println(controller_pitch_input);
+
   // Get reference values from RC receiver
-  float reference_angle_roll = CONTROL_ANGLE_RATIO * (rc_receiver_get_value(RC_RECEIVER_CHANNEL_1) - 1500);
-  float reference_angle_pitch = CONTROL_ANGLE_RATIO * (rc_receiver_get_value(RC_RECEIVER_CHANNEL_2) - 1500);
+  float reference_angle_roll = CONTROL_ANGLE_RATIO * (controller_roll_input - 1500);
+  float reference_angle_pitch = CONTROL_ANGLE_RATIO * (controller_pitch_input - 1500);
   float reference_rate_yaw = 0.15 * (rc_receiver_get_value(RC_RECEIVER_CHANNEL_4) - 1500);
-  float reference_throttle = rc_receiver_get_value(RC_RECEIVER_CHANNEL_3);
+  float reference_throttle = rc_receiver_get_value(RC_RECEIVER_CHANNEL_3) - THROTTLE_OFFSET;
   float start_switch = rc_receiver_get_value(RC_RECEIVER_CHANNEL_7);
 
   // Calculate angle error values
@@ -113,23 +142,36 @@ void motor_controller_update(void)
   float error_angle_pitch = reference_angle_pitch - imu_get_pitch_angle();
   float error_rate_yaw  = reference_rate_yaw - imu_get_yaw_rate();
 
+  // Serial.print("Desired Roll = ");Serial.print(reference_angle_roll);
+  // Serial.print(" Desired Pitch = ");Serial.print(reference_angle_pitch);
+
+  // Serial.print(" Roll Error = "); Serial.print(error_angle_roll);
+  // Serial.print(" Pitch Error = "); Serial.print(error_angle_pitch);
+  // Serial.print(" Yaw Error = "); Serial.println(error_rate_yaw);
+
   // Update PIDs
   pid_update(&pids[PID_ROLL], error_angle_roll); 
   pid_update(&pids[PID_PITCH], error_angle_pitch);
   pid_update(&pids[PID_YAW], error_rate_yaw);
 
   // Check for start switch on
-  if((start_switch < 1250) && throttle_low){
+  if((start_switch < 1250) && throttle_low && (reference_throttle > 500)){
     // Check for saturation of throttle
     if (reference_throttle > THROTTLE_MAX) {
       reference_throttle = THROTTLE_MAX;
     }
 
+    pids[PID_YAW].output = 0.0;
+
+    // Serial.print("PID_PITCH = "); Serial.print(pids[PID_PITCH].output);
+    // Serial.print("\tPID_ROLL = "); Serial.print(pids[PID_ROLL].output);
+    // Serial.print("    \tPID_YAW = "); Serial.println(pids[PID_YAW].output);
+
     // Calculate motor control inputs
-    motor_inputs[MOTOR_1] = (reference_throttle - pids[PID_PITCH].output + pids[PID_ROLL].output - pids[PID_YAW].output);
-    motor_inputs[MOTOR_2] = (reference_throttle + pids[PID_PITCH].output + pids[PID_ROLL].output + pids[PID_YAW].output);
-    motor_inputs[MOTOR_3] = (reference_throttle + pids[PID_PITCH].output - pids[PID_ROLL].output - pids[PID_YAW].output);
-    motor_inputs[MOTOR_4] = (reference_throttle - pids[PID_PITCH].output - pids[PID_ROLL].output + pids[PID_YAW].output);
+    motor_inputs[MOTOR_1] = (reference_throttle - pids[PID_PITCH].output - pids[PID_ROLL].output - pids[PID_YAW].output);
+    motor_inputs[MOTOR_2] = (reference_throttle + pids[PID_PITCH].output - pids[PID_ROLL].output + pids[PID_YAW].output);
+    motor_inputs[MOTOR_3] = (reference_throttle + pids[PID_PITCH].output + pids[PID_ROLL].output - pids[PID_YAW].output);
+    motor_inputs[MOTOR_4] = (reference_throttle - pids[PID_PITCH].output + pids[PID_ROLL].output + pids[PID_YAW].output);
 
     // Check for saturation/idle conditions of motor inputs
     for (int i = 0; i < NUM_MOTORS; ++i) {
