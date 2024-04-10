@@ -1,5 +1,6 @@
 {
-    "board": "arduino:avr:uno",
     "port": "COM14",
-    "sketch": "source\\quadcopter_controller\\quadcopter_controller.ino"
+    "board": "arduino:avr:uno",
+    "sketch": "source\\quadcopter_controller\\quadcopter_controller.ino",
+    "programmer": "avrisp"
 }
