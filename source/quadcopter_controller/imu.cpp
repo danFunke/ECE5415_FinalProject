@@ -1,5 +1,6 @@
 #include "imu.h"
 #include "kalman_filter.h"
+#include "offsetinit.h"
 #include <Arduino.h>
 #include <Wire.h>
 
@@ -119,6 +120,9 @@ void imu_init(void)
   // Initialize output filters
   kalman_filter_init(&roll_angle);
   kalman_filter_init(&pitch_angle);
+
+  // Get offsets for roll and pitch values
+  offset_init();
 }
 
 float imu_get_roll_rate(void)
@@ -138,10 +142,10 @@ float imu_get_yaw_rate(void)
 
 float imu_get_roll_angle(void)
 {
-  return roll_angle.kalman_value;
+  return roll_angle.kalman_value - get_roll_offset();
 }
 
 float imu_get_pitch_angle(void)
 {
-  return pitch_angle.kalman_value;
+  return pitch_angle.kalman_value - get_pitch_offset();
 }

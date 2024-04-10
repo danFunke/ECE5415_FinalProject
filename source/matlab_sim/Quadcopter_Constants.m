@@ -38,42 +38,14 @@ g = 9.81;
 
 pi = 3.14159265359;
 
-% Declare the weights for the fuzzy controllers
-weights =   [1.0000    1.0000    1.0000    1.0000
-            1.0000    1.0000    1.0000    1.0000
-            1.0000    1.0000    1.0000    1.0000
-            1.0000    1.0000    1.0000    1.0000
-            1.0000    1.0000    1.0000    1.0000
-                 0    1.0000    1.0000    1.0000
-                 0    1.0000    1.0000    1.0000
-                 0    1.0000    1.0000    1.0000
-                 0    1.0000    1.0000    1.0000
-                 0    1.0000    1.0000    1.0000
-                 0    1.0000    1.0000    1.0000
-                 0    1.0000    1.0000    1.0000
-                 0    1.0000         1    1.0000
-                 0    1.0000         1    1.0000
-                 0    1.0000         1    1.0000
-                 0    1.0000         0    1.0000
-                 0    1.0000         0    1.0000
-                 0    1.0000         0         0
-                 0    1.0000         0         0
-                 0    1.0000         0         0
-                 0    1.0000         0         0
-                 0    1.0000         0         0
-                 0    1.0000         0         0
-                 0    1.0000         0         0
-                 0    1.0000         0         0
-                 0    1.0000         0         0];
-
 % PID_Parameters
 kd_phi = 1;
 ki_phi = 1;
 kp_phi = 1;
 
+kp_theta = 1.3;
+ki_theta = 0.04;
 kd_theta = 1;
-ki_theta = 1;
-kp_theta = 1;
 
 kd_yaw = 1;
 ki_yaw = 1;
@@ -83,8 +55,10 @@ kd = 1;
 kp = 1;
 ki = 1;
 
-kf = 1;
+sample_freq = 250;
 
-sample_freq = 1000;
+% Conversion for control signal to motorspeed(rpm)
 
-mdlWks = get_param("Quadcopter_State_model_Arduino", "ModelWorkspace");
+Kv = 800;
+Batt_Voltage = 11.1;
+Zero_Point = 1100;

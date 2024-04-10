@@ -7,11 +7,14 @@
 
 #define MOTOR_CONTROL_PINS B11110000
 
+#define MAX_ANGLE 20
+#define CONTROL_ANGLE_RATIO MAX_ANGLE/500
+
 #define THROTTLE_MAX  1800
 #define THROTTLE_IDLE 1200
 #define THROTTLE_MIN  1050
 
-#define MOTOR_INPUT_MAX   2000
+#define MOTOR_INPUT_MAX   1600
 #define MOTOR_INPUT_IDLE  1100
 #define MOTOR_INPUT_MIN   1000
 
@@ -30,6 +33,8 @@ const float dT = 0.004;
 pid_t pids[NUM_PIDS];
 
 int motor_inputs[NUM_MOTORS];
+
+bool throttle_low = false;
 
 static void write_pulses(void)
 {
@@ -97,10 +102,11 @@ void motor_controller_init(void)
 void motor_controller_update(void)
 {
   // Get reference values from RC receiver
-  float reference_angle_roll = 0.10 * (rc_receiver_get_value(RC_RECEIVER_CHANNEL_1) - 1500);
-  float reference_angle_pitch = 0.10 * (rc_receiver_get_value(RC_RECEIVER_CHANNEL_2) - 1500);
+  float reference_angle_roll = CONTROL_ANGLE_RATIO * (rc_receiver_get_value(RC_RECEIVER_CHANNEL_1) - 1500);
+  float reference_angle_pitch = CONTROL_ANGLE_RATIO * (rc_receiver_get_value(RC_RECEIVER_CHANNEL_2) - 1500);
   float reference_rate_yaw = 0.15 * (rc_receiver_get_value(RC_RECEIVER_CHANNEL_4) - 1500);
   float reference_throttle = rc_receiver_get_value(RC_RECEIVER_CHANNEL_3);
+  float start_switch = rc_receiver_get_value(RC_RECEIVER_CHANNEL_7);
 
   // Calculate angle error values
   float error_angle_roll = reference_angle_roll - imu_get_roll_angle();
@@ -108,44 +114,60 @@ void motor_controller_update(void)
   float error_rate_yaw  = reference_rate_yaw - imu_get_yaw_rate();
 
   // Update PIDs
-  pid_update(&pids[PID_ROLL], error_angle_roll);
+  pid_update(&pids[PID_ROLL], error_angle_roll); 
   pid_update(&pids[PID_PITCH], error_angle_pitch);
   pid_update(&pids[PID_YAW], error_rate_yaw);
 
-  // Check for saturation of throttle
-  if (reference_throttle > THROTTLE_MAX) {
-    reference_throttle = THROTTLE_MAX;
-  }
-
-  // Calculate motor control inputs
-  motor_inputs[MOTOR_1] = (reference_throttle - pids[PID_PITCH].output + pids[PID_ROLL].output - pids[PID_YAW].output);
-  motor_inputs[MOTOR_2] = (reference_throttle + pids[PID_PITCH].output + pids[PID_ROLL].output + pids[PID_YAW].output);
-  motor_inputs[MOTOR_3] = (reference_throttle + pids[PID_PITCH].output - pids[PID_ROLL].output - pids[PID_YAW].output);
-  motor_inputs[MOTOR_4] = (reference_throttle - pids[PID_PITCH].output - pids[PID_ROLL].output + pids[PID_YAW].output);
-
-  // Check for saturation/idle conditions of motor inputs
-  for (int i = 0; i < NUM_MOTORS; ++i) {
-    // Saturation
-    if (motor_inputs[i] > MOTOR_INPUT_MAX) {
-      motor_inputs[i] = MOTOR_INPUT_MAX - 1;
-    } 
-    
-    // Idle
-    if (motor_inputs[i] < MOTOR_INPUT_IDLE) {
-      motor_inputs[i] = MOTOR_INPUT_IDLE;
+  // Check for start switch on
+  if((start_switch < 1250) && throttle_low){
+    // Check for saturation of throttle
+    if (reference_throttle > THROTTLE_MAX) {
+      reference_throttle = THROTTLE_MAX;
     }
-  }
 
-  // Check for cutoff condition
-  if (reference_throttle < THROTTLE_MIN) {
+    // Calculate motor control inputs
+    motor_inputs[MOTOR_1] = (reference_throttle - pids[PID_PITCH].output + pids[PID_ROLL].output - pids[PID_YAW].output);
+    motor_inputs[MOTOR_2] = (reference_throttle + pids[PID_PITCH].output + pids[PID_ROLL].output + pids[PID_YAW].output);
+    motor_inputs[MOTOR_3] = (reference_throttle + pids[PID_PITCH].output - pids[PID_ROLL].output - pids[PID_YAW].output);
+    motor_inputs[MOTOR_4] = (reference_throttle - pids[PID_PITCH].output - pids[PID_ROLL].output + pids[PID_YAW].output);
+
+    // Check for saturation/idle conditions of motor inputs
     for (int i = 0; i < NUM_MOTORS; ++i) {
-      motor_inputs[i] = MOTOR_INPUT_MIN;
+      // Saturation
+      if (motor_inputs[i] > MOTOR_INPUT_MAX) {
+        motor_inputs[i] = MOTOR_INPUT_MAX - 1;
+      } 
+      
+      // Idle
+      if (motor_inputs[i] < MOTOR_INPUT_IDLE) {
+        motor_inputs[i] = MOTOR_INPUT_IDLE;
+      }
     }
 
-    // Reset PIDs
-    for (int i = 0; i < NUM_PIDS; ++i) {
-      pid_reset(&pids[i]);
+    // Check for cutoff condition
+    if (reference_throttle < THROTTLE_MIN) {
+      for (int i = 0; i < NUM_MOTORS; ++i) {
+        motor_inputs[i] = MOTOR_INPUT_MIN;
+      }
+
+      // Reset PIDs
+      for (int i = 0; i < NUM_PIDS; ++i) {
+        pid_reset(&pids[i]);
+      }
     }
+  }else{
+    if(start_switch < 1250){
+      if(!throttle_low && reference_throttle<1050){
+        throttle_low = true;
+      }
+    }else{
+      throttle_low = false;
+    }
+    // Start switch isn't on so turn off motors
+    motor_inputs[MOTOR_1] = MOTOR_INPUT_MIN;
+    motor_inputs[MOTOR_2] = MOTOR_INPUT_MIN;
+    motor_inputs[MOTOR_3] = MOTOR_INPUT_MIN;
+    motor_inputs[MOTOR_4] = MOTOR_INPUT_MIN;
   }
 
   // Write motor control values
