@@ -29,9 +29,9 @@ enum PIDNames {
 };
 
 // TODO: fill in appropriate gain values; gains for roll and pitch will be equal
-const float K_P[] = {4, 4, 4.0};// {1.3, 1.3, 4.0};
-const float K_I[] = {0, 0, 0};// {0.04, 0.04, 0.02};
-const float K_D[] = {2, 2, 0};// {18, 18, 1};
+const float K_P[] = {2.5, 2.5, 8};// {1.3, 1.3, 4.0};
+const float K_I[] = {.1, .1, 0};// {0.04, 0.04, 0.02};
+const float K_D[] = {1, 1, .2};// {18, 18, 1};
 const float dT = 0.005;
 pid_t pids[NUM_PIDS];
 
@@ -109,6 +109,7 @@ void motor_controller_update(void)
   // Get inputs from RC receiver and map
   float controller_roll_input = rc_receiver_get_value(RC_RECEIVER_CHANNEL_1);
   float controller_pitch_input = rc_receiver_get_value(RC_RECEIVER_CHANNEL_2);
+  float controller_yaw_input = rc_receiver_get_value(RC_RECEIVER_CHANNEL_4);
   // Serial.print("roll_input: "); Serial.print(controller_roll_input);
   // Serial.print(" pitch_input: "); Serial.println(controller_pitch_input);
   if((controller_pitch_input >= (1500 - DEADZONE)) && (controller_pitch_input <= (1500 + DEADZONE))){
@@ -119,6 +120,10 @@ void motor_controller_update(void)
     controller_pitch_input = controller_pitch_input + DEADZONE;
   }
 
+  // Invert pitch to be more intuitive
+  float temp = 2000 - controller_pitch_input;
+  controller_pitch_input = 1000 + temp;
+
   if((controller_roll_input >= (1500 - DEADZONE)) && (controller_roll_input <= (1500 + DEADZONE))){
     controller_roll_input = 1500;
   }else if(controller_roll_input > (1500 + DEADZONE)){
@@ -127,13 +132,21 @@ void motor_controller_update(void)
     controller_roll_input = controller_roll_input + DEADZONE;
   }
 
+  if((controller_yaw_input >= (1500 - DEADZONE)) && (controller_yaw_input <= (1500 + DEADZONE))){
+    controller_yaw_input = 1500;
+  }else if(controller_yaw_input > (1500 + DEADZONE)){
+    controller_yaw_input = controller_yaw_input - DEADZONE;
+  }else{
+    controller_yaw_input = controller_yaw_input + DEADZONE;
+  }
+
   // Serial.print("roll_input: "); Serial.print(controller_roll_input);
   // Serial.print(" pitch_input: "); Serial.println(controller_pitch_input);
 
   // Get reference values from RC receiver
   float reference_angle_roll = CONTROL_ANGLE_RATIO * (controller_roll_input - 1500);
   float reference_angle_pitch = CONTROL_ANGLE_RATIO * (controller_pitch_input - 1500);
-  float reference_rate_yaw = 0.15 * (rc_receiver_get_value(RC_RECEIVER_CHANNEL_4) - 1500);
+  float reference_rate_yaw = 0.15 * (controller_yaw_input - 1500);
   float reference_throttle = rc_receiver_get_value(RC_RECEIVER_CHANNEL_3) - THROTTLE_OFFSET;
   float start_switch = rc_receiver_get_value(RC_RECEIVER_CHANNEL_7);
 
@@ -161,7 +174,7 @@ void motor_controller_update(void)
       reference_throttle = THROTTLE_MAX;
     }
 
-    pids[PID_YAW].output = 0.0;
+    // pids[PID_YAW].output = 0.0;
 
     // Serial.print("PID_PITCH = "); Serial.print(pids[PID_PITCH].output);
     // Serial.print("\tPID_ROLL = "); Serial.print(pids[PID_ROLL].output);
