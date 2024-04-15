@@ -15,6 +15,7 @@
 /*** Global variables ***/
 const uint32_t FRAME_DURATION = 5000;
 
+bool RED_LED_STATUS = true;
 
 uint32_t frame_timer;
 
@@ -23,12 +24,12 @@ void setup(void)
   // Initialize status LEDs
   pinMode(STATUS_LED_RED, OUTPUT);
   pinMode(STATUS_LED_GREEN, OUTPUT);
-  // Serial.begin(115200);
+  Serial.begin(115200);
 
   // Initialize hardware
   digitalWrite(STATUS_LED_RED, HIGH);
   digitalWrite(STATUS_LED_GREEN, LOW);
-  // Serial.print("Beginning Initialization");
+  Serial.print("Beginning Initialization");
   for(int i=0; i<5; i++){
     Serial.print(".");
     delay(250);
@@ -66,13 +67,18 @@ void loop()
   // Serial.println(frame_length);
   if(frame_length > FRAME_DURATION){
     // Serial.print("FRAME DURATION EXCEEDED! Length = ");Serial.print(frame_length);Serial.println("us");
-    digitalWrite(STATUS_LED_RED, HIGH);
+    digitalWrite(STATUS_LED_RED, RED_LED_STATUS);
+    if(print_count == 200){RED_LED_STATUS = !RED_LED_STATUS;}
   }
   while(micros() - frame_timer < FRAME_DURATION) {}
   frame_timer = micros();
 
+  // Serial.println("motor");
   motor_controller_update();
+  // Serial.println("imu");
   imu_update1();
+  imu_update3();
+  // Serial.println("receiver");
   rc_receiver_update();
   // float time = micros();
   // imu_update2();  // Moved to within motorspeed output to save time while idling for 1000us
@@ -105,13 +111,13 @@ void loop()
     // Serial.print("     THROTTLE:");
     // Serial.print(rc_receiver_get_value(RC_RECEIVER_CHANNEL_3));
     // Serial.print(",");
-    // Serial.print("    CHANNEL 5:");
+    // Serial.print("    Log Switch:");
     // Serial.print(rc_receiver_get_value(RC_RECEIVER_CHANNEL_5));
     // Serial.print(",");
     // Serial.print("     CHANNEL 6:");
     // Serial.print(rc_receiver_get_value(RC_RECEIVER_CHANNEL_6));
     // Serial.print(",");
-    // Serial.print("     CHANNEL 7:");
+    // Serial.print("     Start Switch:");
     // Serial.print(rc_receiver_get_value(RC_RECEIVER_CHANNEL_7));
     // Serial.print(",");
     // Serial.print("     CHANNEL 8:");
@@ -130,5 +136,5 @@ void loop()
     // Serial.println(imu_get_yaw_rate());
     // print_count = 0;
   // }
-  // print_count++;
+  print_count++;
 }

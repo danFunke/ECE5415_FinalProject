@@ -39,21 +39,21 @@ g = 9.81;
 pi = 3.14159265359;
 
 % PID_Parameters
+kp_phi = 2.5;
+ki_phi = .1;
 kd_phi = 1;
-ki_phi = 1;
-kp_phi = 1;
 
-kp_theta = 1.3;
-ki_theta = 0.04;
-kd_theta = 1;
+kp_theta = kd_phi;
+ki_theta = ki_phi;
+kd_theta = kd_phi;
 
-kd_yaw = 1;
-ki_yaw = 1;
-kp_yaw = 1;
+kp_yaw = 8;
+ki_yaw = 0;
+kd_yaw = .2;
 
-kd = 1;
-kp = 1;
-ki = 1;
+% kd = 1;
+% kp = 1;
+% ki = 1;
 
 sample_freq = 250;
 

@@ -4,6 +4,8 @@
 #include <Arduino.h>
 #include <Wire.h>
 
+const float dT = .005;
+
 const int MPU_ADDR = 0x68;  // I2C address of MPU board
 const int RATE_CALIBRATION_ITERATIONS = 2000;
 
@@ -18,9 +20,12 @@ bool gyro_is_calibrated = false;
 float acc_x;
 float acc_y;
 float acc_z;
-float acc_x_calibration = 0;
+float acc_x_calibration = -0.08;
 float acc_y_calibration = 0;
-float acc_z_calibration = -0.02;
+float acc_z_calibration = 0.15;
+
+float z_rate = 0.0;
+float x_comp, y_comp, z_comp;
 
 // Output variables
 kalman_filter_1d_t roll_angle;
@@ -70,7 +75,7 @@ void imu_update2(void)
     rate_yaw -= rate_yaw_calibration;
   }
 
-  // Calculate roll and pitch angles in radians
+  // // Calculate roll and pitch angles in radians
   // float roll_angle_raw = atan(acc_y / sqrt(acc_x * acc_x + acc_z * acc_z));
   // float pitch_angle_raw = -atan(acc_x / sqrt(acc_y * acc_y + acc_z * acc_z));
 
@@ -81,6 +86,16 @@ void imu_update2(void)
   // Update filtered output values
   kalman_filter_update(&roll_angle, rate_roll, roll_angle_raw);
   kalman_filter_update(&pitch_angle, rate_pitch, pitch_angle_raw);
+}
+
+void imu_update3(void){
+  // Calculate Z velocity
+  float roll_angle_rad = imu_get_roll_angle() * (3.142/180);
+  float pitch_angle_rad = imu_get_pitch_angle() * (3.142/180);
+  x_comp = (-acc_x)*sin(pitch_angle_rad);
+  y_comp = acc_y*sin(roll_angle_rad);
+  z_comp = acc_z*cos(roll_angle_rad)*cos(pitch_angle_rad);
+  z_rate += (x_comp + y_comp + z_comp - 1) * 981 * dT; // * dT; cm/s
 }
 
 void imu_init(void)
@@ -163,4 +178,9 @@ float imu_get_roll_angle(void)
 float imu_get_pitch_angle(void)
 {
   return(pitch_angle.kalman_value - get_pitch_offset());
+}
+
+float imu_get_z_rate(void)
+{
+  return z_rate;
 }
