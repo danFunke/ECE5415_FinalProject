@@ -9,6 +9,8 @@
 #include "rc_receiver.h"
 #include "offsetinit.h"
 
+// #define Z_RATE_CONTROL
+
 #define STATUS_LED_RED    13
 #define STATUS_LED_GREEN  12
 
@@ -77,7 +79,9 @@ void loop()
   motor_controller_update();
   // Serial.println("imu");
   imu_update1();
+  #ifdef Z_RATE_CONTROL
   imu_update3();
+  #endif
   // Serial.println("receiver");
   rc_receiver_update();
   // float time = micros();
@@ -86,55 +90,55 @@ void loop()
 
   // Debug
   // if (print_count == 125) {
-    // Serial.print("MOTOR 0:");
-    // Serial.print(motor_controller_get_inputs(0));
-    // Serial.print(",");
-    // Serial.print("\tMOTOR 1:");
-    // Serial.print(motor_controller_get_inputs(1));
-    // Serial.print(",");
-    // Serial.print("\tMOTOR 2:");
-    // Serial.print(motor_controller_get_inputs(2));
-    // Serial.print(",");
-    // Serial.print("\tMOTOR 3:");
-    // Serial.print(motor_controller_get_inputs(3));
-    // Serial.println();
+  //   Serial.print("MOTOR 0:");
+  //   Serial.print(motor_controller_get_inputs(0));
+  //   Serial.print(",");
+  //   Serial.print("\tMOTOR 1:");
+  //   Serial.print(motor_controller_get_inputs(1));
+  //   Serial.print(",");
+  //   Serial.print("\tMOTOR 2:");
+  //   Serial.print(motor_controller_get_inputs(2));
+  //   Serial.print(",");
+  //   Serial.print("\tMOTOR 3:");
+  //   Serial.print(motor_controller_get_inputs(3));
+  //   Serial.println();
 
-    // Serial.print("ROLL:");
-    // Serial.print(rc_receiver_get_value(RC_RECEIVER_CHANNEL_1));
-    // Serial.print(",");
-    // Serial.print("     PITCH:");
-    // Serial.print(rc_receiver_get_value(RC_RECEIVER_CHANNEL_2));
-    // Serial.print(",");
-    // Serial.print("     YAW:");
-    // Serial.print(rc_receiver_get_value(RC_RECEIVER_CHANNEL_4));
-    // Serial.print(",");
-    // Serial.print("     THROTTLE:");
-    // Serial.print(rc_receiver_get_value(RC_RECEIVER_CHANNEL_3));
-    // Serial.print(",");
-    // Serial.print("    Log Switch:");
-    // Serial.print(rc_receiver_get_value(RC_RECEIVER_CHANNEL_5));
-    // Serial.print(",");
-    // Serial.print("     CHANNEL 6:");
-    // Serial.print(rc_receiver_get_value(RC_RECEIVER_CHANNEL_6));
-    // Serial.print(",");
-    // Serial.print("     Start Switch:");
-    // Serial.print(rc_receiver_get_value(RC_RECEIVER_CHANNEL_7));
-    // Serial.print(",");
-    // Serial.print("     CHANNEL 8:");
-    // Serial.print(rc_receiver_get_value(RC_RECEIVER_CHANNEL_8)); 
-    // Serial.println();
+  //   Serial.print("ROLL:");
+  //   Serial.print(rc_receiver_get_value(RC_RECEIVER_CHANNEL_1));
+  //   Serial.print(",");
+  //   Serial.print("     PITCH:");
+  //   Serial.print(rc_receiver_get_value(RC_RECEIVER_CHANNEL_2));
+  //   Serial.print(",");
+  //   Serial.print("     YAW:");
+  //   Serial.print(rc_receiver_get_value(RC_RECEIVER_CHANNEL_4));
+  //   Serial.print(",");
+  //   Serial.print("     THROTTLE:");
+  //   Serial.print(rc_receiver_get_value(RC_RECEIVER_CHANNEL_3));
+  //   Serial.print(",");
+  //   Serial.print("    Log Switch:");
+  //   Serial.print(rc_receiver_get_value(RC_RECEIVER_CHANNEL_5));
+  //   Serial.print(",");
+  //   Serial.print("     CHANNEL 6:");
+  //   Serial.print(rc_receiver_get_value(RC_RECEIVER_CHANNEL_6));
+  //   Serial.print(",");
+  //   Serial.print("     Start Switch:");
+  //   Serial.print(rc_receiver_get_value(RC_RECEIVER_CHANNEL_7));
+  //   Serial.print(",");
+  //   Serial.print("     CHANNEL 8:");
+  //   Serial.print(rc_receiver_get_value(RC_RECEIVER_CHANNEL_8)); 
+  //   Serial.println();
 
-    // Serial.print("Roll Offset = ");
-    // Serial.print(get_roll_offset());
-    // Serial.print(" Pitch Offset = ");
-    // Serial.print(get_pitch_offset());
-    // Serial.print(" Roll = ");
-    // Serial.print(imu_get_roll_angle());
-    // Serial.print(" Pitch = ");
-    // Serial.print(imu_get_pitch_angle());
-    // Serial.print(" Yaw_Rate = ");
-    // Serial.println(imu_get_yaw_rate());
-    // print_count = 0;
+  //   Serial.print("Roll Offset = ");
+  //   Serial.print(get_roll_offset());
+  //   Serial.print(" Pitch Offset = ");
+  //   Serial.print(get_pitch_offset());
+  //   Serial.print(" Roll = ");
+  //   Serial.print(imu_get_roll_angle());
+  //   Serial.print(" Pitch = ");
+  //   Serial.print(imu_get_pitch_angle());
+  //   Serial.print(" Yaw_Rate = ");
+  //   Serial.println(imu_get_yaw_rate());
+  //   print_count = 0;
   // }
   print_count++;
 }
