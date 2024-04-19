@@ -23,7 +23,7 @@ void setup(void)
   // Initialize status LEDs
   pinMode(STATUS_LED_RED, OUTPUT);
   pinMode(STATUS_LED_GREEN, OUTPUT);
-  // Serial.begin(115200);
+  Serial.begin(115200);
 
   // Initialize hardware
   digitalWrite(STATUS_LED_RED, HIGH);
@@ -53,7 +53,7 @@ void setup(void)
 
   // Dev/Debug
   pinMode(8, OUTPUT);
-
+  // Serial.begin(115200);
   // Initialize frame timer
   frame_timer = micros();
 }
@@ -119,11 +119,11 @@ void loop()
     // Serial.println();
 
     // Serial.print("Roll Offset = ");
-    // Serial.print(get_roll_offset());
+    // Serial.println(get_roll_offset());
     // Serial.print(" Pitch Offset = ");
     // Serial.print(get_pitch_offset());
     // Serial.print(" Roll = ");
-    // Serial.print(imu_get_roll_angle());
+    // Serial.println(imu_get_roll_angle());
     // Serial.print(" Pitch = ");
     // Serial.print(imu_get_pitch_angle());
     // Serial.print(" Yaw_Rate = ");

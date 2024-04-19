@@ -1,6 +1,7 @@
 {
-    "board": "arduino:avr:uno",
+    "board": "arduino:avr:mega",
     "sketch": "source\\quadcopter_controller\\quadcopter_controller.ino",
-    "port": "COM14",
-    "programmer": "avrisp"
+    "port": "COM10",
+    "programmer": "avrisp",
+    "configuration": "cpu=atmega2560"
 }

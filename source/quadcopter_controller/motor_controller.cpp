@@ -5,7 +5,14 @@
 
 #include <Arduino.h>
 
+// #define UNO
+#define MEGA
+
 #define MOTOR_CONTROL_PINS B11110000
+
+#define H_PINS B00011000
+#define E_PINS B00001000
+#define G_PINS B00100000
 
 #define MAX_ANGLE 20.0
 #define CONTROL_ANGLE_RATIO MAX_ANGLE/500.0
@@ -44,8 +51,15 @@ static void write_pulses(void)
   // Get current time
   unsigned long pulse_timer = micros();
 
+  #ifdef UNO
   // Write ones to all motor control output pins
   PORTD |= MOTOR_CONTROL_PINS;
+  #endif
+  #ifdef MEGA
+  PORTH |= H_PINS; // 6 = PH3; 7 = PH4;
+  PORTE |= E_PINS; // 5 = PE3;
+  PORTG |= G_PINS; // 4 = PG5;
+  #endif
 
   // Calculate pulse durations
   unsigned long pulse_durations[NUM_MOTORS];
@@ -57,6 +71,7 @@ static void write_pulses(void)
 
   // Write pulses over output pins
   unsigned long loop_timer;
+  #ifdef UNO
   while (PORTD >= 16) {
     loop_timer = micros();
 
@@ -75,21 +90,63 @@ static void write_pulses(void)
     if (pulse_durations[3] <= loop_timer) {
       PORTD &= B01111111;
     }
-
   }
+  #endif
+  #ifdef MEGA
+  
+  while ((PORTH >= 16) || (PORTE >= 16) || (PORTG >= 16)) {
+    loop_timer = micros();
+
+    if (pulse_durations[0] <= loop_timer) {
+      PORTG &= ~G_PINS;
+    }
+
+    if (pulse_durations[1] <= loop_timer) {
+      PORTE &= B11110111;
+    }
+
+    if (pulse_durations[2] <= loop_timer) {
+      PORTH &= B11101111;
+    }
+
+    if (pulse_durations[3] <= loop_timer) {
+      PORTH &= ~H_PINS;
+    }
+  }
+
+  #endif
 }
 
 void motor_controller_init(void)
 {
   // Set motor control pins as output
+  #ifdef UNO
   DDRD |= MOTOR_CONTROL_PINS;
+  #endif
+  #ifdef MEGA
+  DDRH |= H_PINS; // 6 = PH3; 7 = PH4;
+  DDRE |= E_PINS; // 5 = PE3;
+  DDRG |= G_PINS; // 4 = PG5;
+  #endif;
 
   // Wait 5 seconds; send 0 signal to ESCs so they stay quiet
   for (int i = 0; i < 1250; ++i) {
+    #ifdef UNO
     PORTD |= MOTOR_CONTROL_PINS;
     delayMicroseconds(1000);
     PORTD &= ~MOTOR_CONTROL_PINS;
     delayMicroseconds(3000);
+    #endif
+    #ifdef MEGA
+    PORTH |= H_PINS; // 6 = PH3; 7 = PH4;
+    PORTE |= E_PINS; // 5 = PE3;
+    PORTG |= G_PINS; // 4 = PG5;
+    delayMicroseconds(1000);
+    PORTH &= ~H_PINS; // 6 = PH3; 7 = PH4;
+    PORTE &= ~E_PINS; // 5 = PE3;
+    PORTG &= ~G_PINS; // 4 = PG5;
+    delayMicroseconds(3000);
+    #endif
   }
 
   // Initialize PIDs
